@@ -11,9 +11,10 @@ ACCOUNTS = {
         "student_id": "Administrator"
     }
 }
+today = datetime.date.today().strftime("%b %d, %Y")
+ATTENDANCE_FILE = f"Attendance Log ({today}).txt"
 
-ATTENDANCE_FILE = 'attendance_log.csv'
-
+ATTENDANCE_DATA = []
 
 def register_account():
     print("\n--- Register New Account ---")
@@ -24,7 +25,7 @@ def register_account():
         return
 
     password = input("Enter new password: ").strip()
-    student_id = input("Enter student name / student ID: ").strip()
+    student_id = input("Enter student name / student ID: ")
 
     ACCOUNTS[username] = {
         "password": password,
@@ -35,20 +36,16 @@ def register_account():
 
 
 def log_attendance(student_id):
+    if has_logged_today(student_id):
+        print(f"\nYou have already logged attendance today!\n")
+        return
+    
     now = datetime.datetime.now()
-    dt_string = now.strftime("%Y-%m-%d %H:%M:%S")
+    dt_string = now.strftime("%b %d, %Y - %I:%M %p") #dt_string = now.strftime("%Y-%m-%d %H:%M:%S") other format
+    #file_exists = os.path.isfile(ATTENDANCE_FILE)
 
-    file_exists = os.path.isfile(ATTENDANCE_FILE)
-
-    try:
-        with open(ATTENDANCE_FILE, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            if not file_exists:
-                writer.writerow(['User ID', 'Timestamp'])
-            writer.writerow([student_id, dt_string])
-        print(f"Attendance marked for Student {student_id} at {dt_string}\n")
-    except IOError as e:
-        print(f"Error writing to file: {e}")
+    ATTENDANCE_DATA.append(f"User ID: {student_id} - Time: {dt_string}\n")
+    print(f"\nAttendance marked for Student {student_id} at {dt_string}\n")
 
 
 def login():
@@ -57,41 +54,49 @@ def login():
     password = input("Enter password: ").strip()
 
     if username in ACCOUNTS and ACCOUNTS[username]["password"] == password:
-        print("Login successful!\n")
+        print("\nLogin successful!\n")
         return username  # Return username instead of student_id
     else:
-        print("Invalid username or password.\n")
+        print("\nInvalid username or password.\n")
         return None
 
 
 def view_attendance():
     print("\n--- Attendance Records ---")
 
+    if len(ATTENDANCE_DATA) >0:
+        for entry in ATTENDANCE_DATA:
+            print(entry.strip())
+        print()
+        
     if not os.path.isfile(ATTENDANCE_FILE):
-        print("No attendance records found.\n")
-        return
+            if len(ATTENDANCE_DATA) == 0:
+                print("\nNo attendance records found.\n")
+            return
 
     try:
         with open(ATTENDANCE_FILE, mode='r') as file:
-            reader = csv.reader(file)
-            rows = list(reader)
+            lines = file.readlines()
 
-            if len(rows) <= 1:
-                print("\nAttendance log is currently empty.\n")
+            if len(lines) == 0:
+                if len(ATTENDANCE_DATA) == 0:
+                    print("Attendance log is currently empty.\n")
                 return
 
-            for row in rows:
-                print(f"User ID: {row[0]} | Time: {row[1]}")
+            print("Attendance Saved\n")
+            for line in lines:
+                print(line.strip())
             print()
     except IOError as e:
         print(f"Error reading file: {e}\n")
 
 
+
 def clear_attendance():
-    with open(ATTENDANCE_FILE, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['User ID', 'Timestamp'])
+    with open(ATTENDANCE_FILE, 'w') as file:
+        file.write("")  #pano ba mag none d2
     print("\nAttendance log cleared!\n")
+
 
 
 def view_accounts():
@@ -100,6 +105,46 @@ def view_accounts():
         print(f"Username: {username} | Password: {info['password']} | Student ID: {info['student_id']}")
     print()
 
+def has_logged_today(student_id):
+    if not os.path.isfile(ATTENDANCE_FILE):
+        return False
+
+    today = datetime.datetime.now().strftime("%b %d, %Y")
+
+    try:
+        with open(ATTENDANCE_FILE, 'r') as file:
+            for line in file:
+                if student_id in line and today in line:
+                    return True
+    except IOError:
+        pass
+
+    return False
+    
+def after_view_attendance():  
+    while True:
+        print("1 - Save the file")
+        print("2 - Back")
+        choice = input("Enter choice: ").strip()
+    
+        if choice == "1":
+            save_file()
+            print(f"\nAttendance log saved as {ATTENDANCE_FILE}.\n")
+            break
+        
+        elif choice == "2":
+            break
+    
+        else:
+            print("\nInvalid choice. Try again.\n")
+
+def save_file():
+    with open(ATTENDANCE_FILE, 'a') as file:
+        for entry in ATTENDANCE_DATA:
+            file.write(entry + "\n")
+    
+    ATTENDANCE_DATA.clear()
+    
 
 def admin_menu():
     while True:
@@ -115,16 +160,19 @@ def admin_menu():
             view_accounts()
         elif admin_choice == "2":
             view_attendance()
+            after_view_attendance()
         elif admin_choice == "3":
             clear_attendance()
         elif admin_choice == "4":
             register_account()
         elif admin_choice == "5":
-            print("Admin logged out.\n")
+            print("\nAdmin logged out.\n")
             break
         else:
-            print("Invalid choice. Try again.\n")
+            print("\nInvalid choice. Try again.\n")
 
+
+    
 
 def main():
     print("--- Group 3's Python Console Attendance System ---")
@@ -145,16 +193,18 @@ def main():
                 else:
                     student_id = ACCOUNTS[username]["student_id"]
                     log_attendance(student_id)
+                    
 
         elif user_action == "2":
             view_attendance()
+            after_view_attendance()
 
         elif user_action == "3":
             print("Exiting program...")
             break
 
         else:
-            print("Invalid choice. Try again.\n")
+            print("\nInvalid choice. Try again.\n")
 
 
 if __name__ == "__main__":
