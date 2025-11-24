@@ -1,5 +1,4 @@
 import datetime
-import csv
 import os
 
 # Stores accounts in memory
@@ -209,3 +208,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
